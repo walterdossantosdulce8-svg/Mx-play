@@ -1,3 +1,117 @@
+
+using UnityEngine;
+using UnityEngine.UI;
+
+public class KiSystem : MonoBehaviour
+{
+    [Header("Energia Ki")]
+    public float maxKi = 100f;
+    public float currentKi = 0f;
+    public float chargeRate = 25f;
+
+    [Header("Efeitos")]
+    public GameObject kiAuraVFX;
+    public ParticleSystem groundDebrisVFX;
+    public float shockwaveRadius = 5f;
+    public float shockwaveForce = 15f;
+    public LayerMask affectedLayers;
+
+    [Header("Interface")]
+    public Slider kiBar;
+
+    private bool isCharging;
+    private bool wasFull;
+
+    void Start()
+    {
+        if (kiAuraVFX != null)
+            kiAuraVFX.SetActive(false);
+
+        if (groundDebrisVFX != null)
+            groundDebrisVFX.Stop();
+
+        UpdateKiBar();
+    }
+
+    void Update()
+    {
+        if (Input.GetKey(KeyCode.C) || isCharging)
+            ChargeKi();
+        else
+            StopCharging();
+
+        UpdateKiBar();
+    }
+
+    public void SetCharging(bool state)
+    {
+        isCharging = state;
+    }
+
+    void ChargeKi()
+    {
+        currentKi = Mathf.Clamp(
+            currentKi + chargeRate * Time.deltaTime,
+            0f, maxKi
+        );
+
+        if (kiAuraVFX != null)
+            kiAuraVFX.SetActive(true);
+
+        if (groundDebrisVFX != null &&
+            !groundDebrisVFX.isPlaying)
+            groundDebrisVFX.Play();
+
+        if (currentKi >= maxKi && !wasFull)
+        {
+            ApplyKiShockwave();
+            wasFull = true;
+        }
+    }
+
+    void StopCharging()
+    {
+        if (kiAuraVFX != null)
+            kiAuraVFX.SetActive(false);
+
+        if (groundDebrisVFX != null)
+            groundDebrisVFX.Stop();
+
+        if (currentKi < maxKi)
+            wasFull = false;
+    }
+
+    void ApplyKiShockwave()
+    {
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            shockwaveRadius,
+            affectedLayers
+        );
+
+        foreach (Collider hit in hits)
+        {
+            Rigidbody rb = hit.attachedRigidbody;
+
+            if (rb != null && !rb.transform.IsChildOf(transform))
+            {
+                Vector3 direction =
+                    (rb.worldCenterOfMass - transform.position).normalized;
+
+                rb.AddForce(
+                    direction * shockwaveForce,
+                    ForceMode.Impulse
+                );
+            }
+        }
+    }
+
+    void UpdateKiBar()
+    {
+        if (kiBar != null)
+            kiBar.value = currentKi / maxKi;
+    }
+}
 <!DOCTYPE html>
 <html lang="pt">
 <head>
